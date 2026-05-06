@@ -1,6 +1,42 @@
 # md-image-oss
 
+> Upload images in Markdown / MDX / HTML to Aliyun OSS — compress, dedupe, and rewrite links in place.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue)](CHANGELOG.md)
+
 把 Markdown / MDX / HTML 文档里的所有图片上传到阿里云 OSS，并自动重写文档里的图片链接。上传前先做一次高质量的本地压缩，配置全部从环境变量读取。
+
+## 快速上手
+
+```bash
+# 1. 安装
+pip install -e .
+
+# 2. 配置（填入阿里云 OSS 凭据）
+cp .env.example .env && $EDITOR .env
+
+# 3. 处理一篇文章（默认输出到 article.oss.md）
+md-oss article.md --env-file .env
+```
+
+实际效果：
+
+```text
+$ md-oss posts/2024-trip.md -i --env-file .env
+📖 Reading posts/2024-trip.md
+🔄 Processing images...
+  ✓ ./images/cover.png
+      → https://cdn.example.com/markdown/8b3f9e6a4c1d2e7f9a0b.jpg
+      482.1 KB → 138.4 KB  (-71%)
+  ✓ ./images/map.jpg
+      → https://cdn.example.com/markdown/3a1c4d5e6f7081929394.jpg
+      1.2 MB → 410.5 KB  (-67%)
+  ⏭  already on OSS: https://cdn.example.com/markdown/...
+💾 Overwriting posts/2024-trip.md
+✨ Done. found=2 uploaded=2 skipped=1 failed=0
+```
 
 ## 特性
 
@@ -104,23 +140,6 @@ md-oss page.html -i          # 直接覆盖
 - Markdown 的围栏代码块和行内代码、HTML 的 `<script>` / `<style>` / `<pre>` / `<code>` / 注释里的内容
 - MDX 中 JSX 表达式形式的 `src={变量}`（只重写带引号的字符串字面量）
 - GIF 和 SVG 不会被压缩（以保留动画 / 矢量），但仍会被上传
-
-## 运行示例
-
-```text
-$ md-oss posts/2024-trip.md -i --env-file .env
-📖 Reading posts/2024-trip.md
-🔄 Processing images...
-  ✓ ./images/cover.png
-      → https://cdn.example.com/markdown/8b3f9e6a4c1d2e7f9a0b.jpg
-      482.1 KB → 138.4 KB  (-71%)
-  ✓ ./images/map.jpg
-      → https://cdn.example.com/markdown/3a1c4d5e6f7081929394.jpg
-      1.2 MB → 410.5 KB  (-67%)
-  ⏭  already on OSS: https://cdn.example.com/markdown/...
-💾 Overwriting posts/2024-trip.md
-✨ Done. found=2 uploaded=2 skipped=1 failed=0
-```
 
 ## 项目结构
 
