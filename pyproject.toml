@@ -9,7 +9,7 @@ description = "Upload Markdown / MDX / HTML images to Aliyun OSS, with high-qual
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
-authors = [{ name = "Your Name" }]
+authors = [{ name = "Luhui Dev" }]
 keywords = ["markdown", "mdx", "html", "aliyun", "oss", "image", "compression", "cli"]
 classifiers = [
     "Programming Language :: Python :: 3",
