@@ -16,9 +16,10 @@ dist/
 venv/
 env/
 
-# IDE
+# IDE / agent tooling
 .idea/
 .vscode/
+.claude/
 *.swp
 
 # OS
