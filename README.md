@@ -11,13 +11,15 @@
 - **去重上传**：用内容哈希作为文件名，重复内容不会重复上传。
 - **配置藏在系统环境**：所有 AccessKey / Endpoint 都从环境变量读取，不进代码也不进文章。
 - **覆盖式或非覆盖式**：默认输出到 `xxx.oss.md`，加 `-i` 直接覆盖原文。
+- **桌面 GUI 客户端**（v0.3+）：跨平台 Windows / macOS，多文件拖拽、配置引导、操作审计日志。
 
 ## 安装
 
 ```bash
 git clone <this-repo> md-image-oss
 cd md-image-oss
-pip install -e .
+pip install -e .                # 仅 CLI
+pip install -e ".[gui]"         # CLI + 桌面客户端 (md-oss-gui)
 ```
 
 或者直接装依赖在仓库目录里跑：
@@ -87,6 +89,47 @@ md-oss page.html -i          # 直接覆盖
 
 `--in-place` 和 `-o/--output` 互斥；不指定时默认写到 `<原名>.oss<原后缀>`。
 
+## 桌面 GUI 客户端
+
+```bash
+pip install -e ".[gui]"
+md-oss-gui
+```
+
+GUI 客户端基于 PySide6，跨平台支持 Windows 与 macOS，提供：
+
+- **批量处理**：拖拽多个文件 / 文件夹（自动递归扫描 `.md/.mdx/.html/.htm`）
+- **覆盖控制**：「覆盖原文件」复选（默认未选），覆盖时同目录生成 `<file>.bak` 备份
+- **预览模式**：「Dry-run」复选，仅模拟运行不写入磁盘
+- **可取消**：处理过程中可中断，已开始的当前文件会跑完
+- **配置引导**：首次启动弹出三标签页的配置对话框（Credentials / Bucket / Advanced），带「测试连接」按钮，支持从 `.env` 文件导入 / 导出
+- **凭据安全**：AccessKey ID / Secret 写入系统凭据管理器（macOS Keychain / Windows Credential Manager），不落明文到磁盘
+
+### 操作审计日志
+
+每次启动、配置变更、连接测试、批处理、单文件处理结果都会写入只追加的 JSONL 审计日志，**不**记录 AccessKey 与文件内容：
+
+| 平台 | 路径 |
+|---|---|
+| macOS | `~/Library/Logs/md-image-oss/audit-YYYY-MM.log` |
+| Windows | `%LOCALAPPDATA%\md-image-oss\Logs\audit-YYYY-MM.log` |
+
+GUI 内菜单 → 「View → Audit log…」可表格化查看，并支持「Open log folder」「Export CSV」。日志按月轮转、人工不可在 GUI 内清空（合规要求），如需清理请直接删文件。
+
+### 打包成可分发应用
+
+仓库提供 `build/md-oss-gui.spec` 作为 PyInstaller 配置：
+
+```bash
+pip install pyinstaller
+# macOS
+pyinstaller --clean build/md-oss-gui.spec    # → dist/md-oss-gui.app
+# Windows (在 Windows 主机上跑)
+pyinstaller --clean build\md-oss-gui.spec    # → dist\md-oss-gui\md-oss-gui.exe
+```
+
+签名 / 公证留待发布时按需补上。
+
 ## 它替换什么、不替换什么
 
 会替换：
@@ -133,7 +176,18 @@ md-image-oss/
 │   ├── config.py        # 从环境变量加载配置
 │   ├── compressor.py    # 基于 Pillow 的图像压缩
 │   ├── uploader.py      # OSS 上传（哈希去重）
-│   └── processor.py     # Markdown 解析 / 重写
+│   ├── processor.py     # Markdown / HTML 解析 / 重写
+│   └── gui/             # 桌面客户端（PySide6, 可选）
+│       ├── app.py            # 入口 md-oss-gui
+│       ├── main_window.py    # 主窗口
+│       ├── settings_dialog.py# 配置引导
+│       ├── settings_store.py # QSettings + keyring
+│       ├── audit_log.py      # JSONL 审计日志
+│       ├── audit_viewer.py   # 审计日志查看器
+│       ├── worker.py         # 后台 QThread
+│       └── widgets/          # 文件列表 / 日志面板
+├── build/
+│   └── md-oss-gui.spec  # PyInstaller 打包配置
 ├── pyproject.toml
 ├── requirements.txt
 ├── .env.example

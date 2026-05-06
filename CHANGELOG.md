@@ -5,6 +5,32 @@
 
 版本号的唯一来源是 [`md_image_oss/__init__.py`](md_image_oss/__init__.py) 里的 `__version__`，
 
+## [0.3.0] - 2026-05-06
+
+### Added
+
+- **桌面 GUI 客户端**（PySide6），跨平台支持 Windows 与 macOS：
+  - 拖拽 / 选择多文件，文件夹自动递归扫描 `.md / .mdx / .html / .htm`
+  - 「覆盖原文件」复选（默认未选），覆盖时自动备份为 `<file>.bak`
+  - 「Dry-run」复选，可在不写入磁盘的情况下预演整个流程
+  - 实时日志面板，行级状态（找到 / 上传 / 失败）
+  - 处理中可取消，当前文件完成后停止
+- **配置引导对话框**：三个标签页（Credentials / Bucket / Advanced），首次启动自动弹出；提供「测试连接」按钮、`.env` 导入 / 导出。
+- **审计日志**（JSONL，append-only）：记录 app_start / config_changed / connection_test / batch_start / file_processed / batch_end / app_end 等事件；不记录 AccessKey 与文件内容。
+  - 内置审计查看器，支持「打开日志文件夹」「导出 CSV」。
+  - 存储位置（`platformdirs`）：macOS `~/Library/Logs/md-image-oss/`、Windows `%LOCALAPPDATA%/md-image-oss/Logs/`。
+- **凭据存储**：AccessKey ID / Secret 通过 `keyring` 写入系统凭据管理器（macOS Keychain / Windows Credential Manager），永不落明文磁盘；其余配置走 QSettings。
+- 新增可选依赖组 `pip install md-image-oss[gui]` 与入口命令 `md-oss-gui`。
+
+### Changed
+
+- `MarkdownProcessor` / `HtmlProcessor` 新增可选构造参数 `log_callback: Callable[[str], None]`，向 GUI 实时转发日志；CLI 行为完全不变。
+
+### Notes
+
+- 打包：随仓库提供 `build/md-oss-gui.spec`，可使用 PyInstaller 生成 macOS `.app` 与 Windows `.exe`；签名 / 公证留待后续迭代。
+- GUI 与 CLI 共享同一份 OSS 配置：可通过 GUI 设置中的「Export .env」导出，再用 CLI `--env-file` 加载。
+
 ## [0.2.0] - 2026-05-06
 
 ### Added

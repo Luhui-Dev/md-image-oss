@@ -21,7 +21,7 @@ import sys
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from typing import Tuple
+from typing import Callable, Optional, Tuple
 
 from .compressor import compress_image
 from .uploader import OSSUploader
@@ -92,12 +92,14 @@ class _BaseProcessor:
         quality: int = 85,
         process_remote: bool = False,
         verbose: bool = True,
+        log_callback: Optional[Callable[[str], None]] = None,
     ):
         self.uploader = uploader
         self.compress = compress
         self.quality = quality
         self.process_remote = process_remote
         self.verbose = verbose
+        self._log_callback = log_callback
         self._cache: dict[str, str] = {}
         self.stats = {"found": 0, "uploaded": 0, "skipped": 0, "failed": 0}
 
@@ -217,7 +219,11 @@ class _BaseProcessor:
         return data, path.suffix or ".jpg"
 
     def _log(self, msg: str) -> None:
-        if self.verbose:
+        if not self.verbose:
+            return
+        if self._log_callback is not None:
+            self._log_callback(msg)
+        else:
             print(msg, file=sys.stderr)
 
 
