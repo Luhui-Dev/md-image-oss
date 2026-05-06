@@ -1,12 +1,17 @@
-"""Markdown processor: find images, upload them, rewrite the article.
+"""Document processors: find images, upload them, rewrite the document.
 
-Handles three kinds of image references:
-1. Markdown syntax:  ![alt](url)  or  ![alt](url "title")
-2. HTML syntax:      <img src="url" ...>
-3. Reference style:  [id]: url   (with  ![alt][id]  used elsewhere)
+Two processors share the same upload / compress / cache pipeline:
 
-Code blocks (fenced ``` and inline `code`) are left untouched so that
-example markdown in tutorials isn't accidentally rewritten.
+- ``MarkdownProcessor`` handles ``.md`` and ``.mdx``. Recognised image
+  references:
+    1. Markdown syntax:  ![alt](url)  or  ![alt](url "title")
+    2. HTML syntax:      <img src="url" ...>   (also covers JSX in MDX)
+    3. Reference style:  [id]: url   (with  ![alt][id]  used elsewhere)
+  Fenced code blocks (``` and ~~~) and inline `code` are left untouched.
+
+- ``HtmlProcessor`` handles ``.html`` / ``.htm``. Only ``<img src="...">``
+  tags are rewritten; ``<script>``, ``<style>``, ``<pre>``, ``<code>`` and
+  HTML comments are left untouched.
 """
 
 from __future__ import annotations
@@ -38,8 +43,9 @@ _MD_IMAGE_RE = re.compile(
     re.VERBOSE,
 )
 
-# <img ...>
+# <img ...>   — matches both HTML (<img src="x">) and JSX (<img src="x" />)
 _HTML_IMG_RE = re.compile(r"<img\b([^>]*)>", re.IGNORECASE)
+# Only quoted string values; JSX expressions like src={foo} are left alone.
 _HTML_SRC_RE = re.compile(r"""src\s*=\s*["']([^"']+)["']""", re.IGNORECASE)
 
 # [label]: url   or   [label]: <url>   ...optional "title"
@@ -57,14 +63,28 @@ _REF_DEF_RE = re.compile(
     re.VERBOSE,
 )
 
-# Strip out fenced code blocks and inline code so we don't touch their content.
-_CODE_BLOCK_RE = re.compile(
+# Fenced code blocks and inline code in Markdown.
+_MD_CODE_RE = re.compile(
     r"```.*?```|~~~.*?~~~|`[^`\n]+`",
     re.DOTALL,
 )
 
+# Regions in HTML where we must not rewrite anything.
+_HTML_SKIP_RE = re.compile(
+    r"""
+      <script\b[^>]*>.*?</script\s*>
+    | <style\b[^>]*>.*?</style\s*>
+    | <pre\b[^>]*>.*?</pre\s*>
+    | <code\b[^>]*>.*?</code\s*>
+    | <!--.*?-->
+    """,
+    re.DOTALL | re.IGNORECASE | re.VERBOSE,
+)
 
-class MarkdownProcessor:
+
+class _BaseProcessor:
+    """Shared upload / compress / cache / stats pipeline."""
+
     def __init__(
         self,
         uploader: OSSUploader,
@@ -83,12 +103,21 @@ class MarkdownProcessor:
 
     # ------------------------------------------------------------------ public
 
-    def process(self, content: str, base_dir: Path) -> str:
-        """Rewrite the markdown so every image points to OSS."""
-        # Split out code blocks; only process the prose between them.
+    def process(self, content: str, base_dir: Path) -> str:  # pragma: no cover
+        raise NotImplementedError
+
+    # ----------------------------------------------------------------- helpers
+
+    def _split_and_rewrite(
+        self,
+        content: str,
+        base_dir: Path,
+        skip_re: re.Pattern[str],
+    ) -> str:
+        """Run ``self._rewrite`` on the prose, leaving ``skip_re`` regions intact."""
         out_parts: list[str] = []
         cursor = 0
-        for m in _CODE_BLOCK_RE.finditer(content):
+        for m in skip_re.finditer(content):
             if m.start() > cursor:
                 out_parts.append(self._rewrite(content[cursor:m.start()], base_dir))
             out_parts.append(m.group(0))
@@ -97,23 +126,8 @@ class MarkdownProcessor:
             out_parts.append(self._rewrite(content[cursor:], base_dir))
         return "".join(out_parts)
 
-    # ----------------------------------------------------------------- private
-
-    def _rewrite(self, text: str, base_dir: Path) -> str:
-        text = _MD_IMAGE_RE.sub(lambda m: self._md_replace(m, base_dir), text)
-        text = _HTML_IMG_RE.sub(lambda m: self._html_replace(m, base_dir), text)
-        text = self._rewrite_references(text, base_dir)
-        return text
-
-    def _md_replace(self, match: re.Match, base_dir: Path) -> str:
-        alt = match.group("alt")
-        url = match.group("url_a") or match.group("url_b") or ""
-        title = match.group("title")
-        new_url = self._maybe_upload(url, base_dir)
-        if title is not None:
-            quote = match.group("quote") or '"'
-            return f"![{alt}]({new_url} {quote}{title}{quote})"
-        return f"![{alt}]({new_url})"
+    def _rewrite(self, text: str, base_dir: Path) -> str:  # pragma: no cover
+        raise NotImplementedError
 
     def _html_replace(self, match: re.Match, base_dir: Path) -> str:
         attrs = match.group(1)
@@ -124,23 +138,6 @@ class MarkdownProcessor:
 
         new_attrs = _HTML_SRC_RE.sub(src_sub, attrs)
         return f"<img{new_attrs}>"
-
-    def _rewrite_references(self, text: str, base_dir: Path) -> str:
-        out_lines = []
-        for line in text.splitlines(keepends=True):
-            stripped = line.rstrip("\n").rstrip("\r")
-            m = _REF_DEF_RE.match(stripped)
-            if not m:
-                out_lines.append(line)
-                continue
-            url = m.group("url_a") or m.group("url_b") or ""
-            # Reference definitions can point to non-images; we still try to
-            # upload, and if reading fails we leave the URL alone.
-            new_url = self._maybe_upload(url, base_dir)
-            rebuilt = f"{m.group('indent')}[{m.group('label')}]: {new_url}{m.group('rest')}"
-            ending = line[len(stripped):]  # preserve original line ending
-            out_lines.append(rebuilt + ending)
-        return "".join(out_lines)
 
     def _maybe_upload(self, url: str, base_dir: Path) -> str:
         url = url.strip()
@@ -211,7 +208,6 @@ class MarkdownProcessor:
             return data, ext
 
         decoded = urllib.parse.unquote(url)
-        # Strip any in-page fragment / query string from local paths.
         decoded = decoded.split("#", 1)[0].split("?", 1)[0]
         path = Path(decoded)
         if not path.is_absolute():
@@ -223,6 +219,54 @@ class MarkdownProcessor:
     def _log(self, msg: str) -> None:
         if self.verbose:
             print(msg, file=sys.stderr)
+
+
+class MarkdownProcessor(_BaseProcessor):
+    """Handles ``.md`` and ``.mdx`` (MDX is a Markdown superset)."""
+
+    def process(self, content: str, base_dir: Path) -> str:
+        return self._split_and_rewrite(content, base_dir, _MD_CODE_RE)
+
+    def _rewrite(self, text: str, base_dir: Path) -> str:
+        text = _MD_IMAGE_RE.sub(lambda m: self._md_replace(m, base_dir), text)
+        text = _HTML_IMG_RE.sub(lambda m: self._html_replace(m, base_dir), text)
+        text = self._rewrite_references(text, base_dir)
+        return text
+
+    def _md_replace(self, match: re.Match, base_dir: Path) -> str:
+        alt = match.group("alt")
+        url = match.group("url_a") or match.group("url_b") or ""
+        title = match.group("title")
+        new_url = self._maybe_upload(url, base_dir)
+        if title is not None:
+            quote = match.group("quote") or '"'
+            return f"![{alt}]({new_url} {quote}{title}{quote})"
+        return f"![{alt}]({new_url})"
+
+    def _rewrite_references(self, text: str, base_dir: Path) -> str:
+        out_lines = []
+        for line in text.splitlines(keepends=True):
+            stripped = line.rstrip("\n").rstrip("\r")
+            m = _REF_DEF_RE.match(stripped)
+            if not m:
+                out_lines.append(line)
+                continue
+            url = m.group("url_a") or m.group("url_b") or ""
+            new_url = self._maybe_upload(url, base_dir)
+            rebuilt = f"{m.group('indent')}[{m.group('label')}]: {new_url}{m.group('rest')}"
+            ending = line[len(stripped):]
+            out_lines.append(rebuilt + ending)
+        return "".join(out_lines)
+
+
+class HtmlProcessor(_BaseProcessor):
+    """Handles ``.html`` / ``.htm``. Only ``<img>`` tags are rewritten."""
+
+    def process(self, content: str, base_dir: Path) -> str:
+        return self._split_and_rewrite(content, base_dir, _HTML_SKIP_RE)
+
+    def _rewrite(self, text: str, base_dir: Path) -> str:
+        return _HTML_IMG_RE.sub(lambda m: self._html_replace(m, base_dir), text)
 
 
 def _fmt_size(n: int) -> str:

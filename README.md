@@ -1,11 +1,12 @@
 # md-image-oss
 
-把 Markdown 文章里的所有图片上传到阿里云 OSS，并自动重写文章里的图片链接。上传前先做一次高质量的本地压缩，配置全部从环境变量读取。
+把 Markdown / MDX / HTML 文档里的所有图片上传到阿里云 OSS，并自动重写文档里的图片链接。上传前先做一次高质量的本地压缩，配置全部从环境变量读取。
 
 ## 特性
 
-- **批量替换**：支持 `![](...)`、`<img src="...">`、引用式 `[label]: url` 三种语法。
-- **代码块安全**：围栏代码块（` ``` `、`~~~`）和行内代码不会被误改。
+- **多格式支持**：`.md`、`.mdx`、`.html`、`.htm` 都能直接处理，按后缀自动选择解析模式。
+- **批量替换**：支持 `![](...)`、`<img src="...">`（含 JSX 自闭合）、引用式 `[label]: url` 三种语法。
+- **代码块安全**：Markdown 的围栏代码块（` ``` `、`~~~`）和行内代码、HTML 的 `<script>` / `<style>` / `<pre>` / `<code>` / 注释都不会被误改。
 - **高质量压缩**：JPEG progressive + quality 85，PNG 无损优化，WebP method=6；GIF / SVG 等不动。
 - **去重上传**：用内容哈希作为文件名，重复内容不会重复上传。
 - **配置藏在系统环境**：所有 AccessKey / Endpoint 都从环境变量读取，不进代码也不进文章。
@@ -78,6 +79,10 @@ md-oss article.md --dry-run > preview.md
 
 # 静默模式：
 md-oss article.md -i --quiet
+
+# MDX / HTML 同样工作，输出后缀跟随输入：
+md-oss post.mdx              # → post.oss.mdx
+md-oss page.html -i          # 直接覆盖
 ```
 
 `--in-place` 和 `-o/--output` 互斥；不指定时默认写到 `<原名>.oss<原后缀>`。
@@ -96,7 +101,8 @@ md-oss article.md -i --quiet
 不替换：
 - `data:` URI、`#` 锚点、`mailto:` 链接
 - 已经在你 OSS / 自定义域上的图片
-- 围栏代码块和行内代码里的内容
+- Markdown 的围栏代码块和行内代码、HTML 的 `<script>` / `<style>` / `<pre>` / `<code>` / 注释里的内容
+- MDX 中 JSX 表达式形式的 `src={变量}`（只重写带引号的字符串字面量）
 - GIF 和 SVG 不会被压缩（以保留动画 / 矢量），但仍会被上传
 
 ## 运行示例

@@ -1,3 +1,3 @@
-"""md-image-oss: Upload markdown images to Aliyun OSS with compression."""
+"""md-image-oss: Upload Markdown / MDX / HTML images to Aliyun OSS with compression."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

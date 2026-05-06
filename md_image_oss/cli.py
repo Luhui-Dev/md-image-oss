@@ -8,31 +8,37 @@ from pathlib import Path
 
 from . import __version__
 from .config import Config, load_env_file
-from .processor import MarkdownProcessor
+from .processor import HtmlProcessor, MarkdownProcessor
 from .uploader import OSSUploader
+
+_MARKDOWN_SUFFIXES = {".md", ".mdx", ".markdown"}
+_HTML_SUFFIXES = {".html", ".htm"}
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="md-oss",
         description=(
-            "Upload all images referenced in a Markdown article to Aliyun OSS, "
-            "compress them first, and rewrite the article."
+            "Upload all images referenced in a Markdown / MDX / HTML document "
+            "to Aliyun OSS, compress them first, and rewrite the document."
         ),
         epilog=(
             "All OSS credentials are read from environment variables — see "
             ".env.example. Use --env-file to load them from a file."
         ),
     )
-    parser.add_argument("input", help="Path to the input Markdown file.")
+    parser.add_argument(
+        "input",
+        help="Path to the input document (.md, .mdx, .html, .htm).",
+    )
     parser.add_argument(
         "-o", "--output",
-        help="Output Markdown path. Defaults to <input>.oss.md.",
+        help="Output path. Defaults to <input>.oss<ext>.",
     )
     parser.add_argument(
         "-i", "--in-place",
         action="store_true",
-        help="Overwrite the original Markdown file in place.",
+        help="Overwrite the original file in place.",
     )
     parser.add_argument(
         "--no-compress",
@@ -90,6 +96,19 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Error: input file not found: {input_path}", file=sys.stderr)
         return 1
 
+    suffix = input_path.suffix.lower()
+    if suffix in _MARKDOWN_SUFFIXES:
+        processor_cls = MarkdownProcessor
+    elif suffix in _HTML_SUFFIXES:
+        processor_cls = HtmlProcessor
+    else:
+        print(
+            f"Error: unsupported file type '{suffix}'. "
+            f"Supported: {', '.join(sorted(_MARKDOWN_SUFFIXES | _HTML_SUFFIXES))}.",
+            file=sys.stderr,
+        )
+        return 2
+
     if args.in_place and args.output:
         print("Error: --in-place and --output are mutually exclusive.", file=sys.stderr)
         return 2
@@ -110,7 +129,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     uploader = OSSUploader(config)
-    processor = MarkdownProcessor(
+    processor = processor_cls(
         uploader=uploader,
         compress=not args.no_compress,
         quality=args.quality,
