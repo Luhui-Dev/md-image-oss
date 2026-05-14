@@ -11,9 +11,6 @@ permissions:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: obsidian-plugin
     steps:
       - uses: actions/checkout@v4
 
@@ -23,28 +20,62 @@ jobs:
           cache: npm
           cache-dependency-path: obsidian-plugin/package-lock.json
 
-      - run: npm ci || npm install
+      - name: Install dependencies
+        working-directory: obsidian-plugin
+        run: npm ci || npm install
 
-      - run: npm test
+      - name: Run tests
+        working-directory: obsidian-plugin
+        run: npm test
 
-      - run: npm run build
+      - name: Build
+        working-directory: obsidian-plugin
+        run: npm run build
 
-      - name: Verify manifest version matches tag
+      - name: Resolve version + verify manifest matches tag
+        id: ver
+        working-directory: obsidian-plugin
         run: |
-          TAG="${GITHUB_REF_NAME#plugin-v}"
+          VERSION="${GITHUB_REF_NAME#plugin-v}"
           MANIFEST=$(node -p "require('./manifest.json').version")
-          if [ "$TAG" != "$MANIFEST" ]; then
-            echo "Tag '$TAG' does not match manifest version '$MANIFEST'"
+          if [ "$VERSION" != "$MANIFEST" ]; then
+            echo "Tag version '$VERSION' does not match manifest version '$MANIFEST'"
             exit 1
           fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Package plugin bundle (zip)
+        working-directory: obsidian-plugin
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          STAGE="md-image-oss"
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE"
+          cp main.js manifest.json styles.css "$STAGE/"
+          zip -r "../md-image-oss-${VERSION}.zip" "$STAGE"
+          ls -la ../md-image-oss-*.zip
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: Plugin ${{ github.ref_name }}
+          name: md-image-oss Obsidian Plugin v${{ steps.ver.outputs.version }}
           generate_release_notes: true
           files: |
+            md-image-oss-${{ steps.ver.outputs.version }}.zip
             obsidian-plugin/main.js
             obsidian-plugin/manifest.json
             obsidian-plugin/styles.css
+          body: |
+            ## 安装
+
+            **方法 A（推荐）：下载 `md-image-oss-${{ steps.ver.outputs.version }}.zip`**
+
+            解压后把 `md-image-oss/` 整个目录放到 `<你的 Vault>/.obsidian/plugins/` 下，重启 Obsidian。
+
+            **方法 B：BRAT / Obsidian 社区插件市场**
+
+            通过 [BRAT](https://github.com/TfTHacker/obsidian42-brat) 等工具从本仓库自动拉取下方的 `main.js` / `manifest.json` / `styles.css`。
+
+            ---
+            详细使用说明见 [obsidian-plugin/README.md](https://github.com/Luhui-Dev/md-image-oss/blob/main/obsidian-plugin/README.md)。
