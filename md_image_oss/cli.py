@@ -71,6 +71,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Process without writing the output file. Useful for previewing.",
     )
     parser.add_argument(
+        "--no-obsidian",
+        action="store_true",
+        help="Disable parsing of Obsidian wikilink image syntax (![[image.png]]).",
+    )
+    parser.add_argument(
+        "--obsidian-vault",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help=(
+            "Explicit Obsidian vault root used to resolve ![[filename]] when the "
+            "file is not next to the note. Skips auto-detection of .obsidian/."
+        ),
+    )
+    parser.add_argument(
         "--version", "-V",
         action="version",
         version=f"%(prog)s {__version__}",
@@ -128,6 +143,13 @@ def main(argv: list[str] | None = None) -> int:
               "then re-run with --env-file .env", file=sys.stderr)
         return 1
 
+    if args.obsidian_vault is not None and not args.obsidian_vault.is_dir():
+        print(
+            f"Error: --obsidian-vault path is not a directory: {args.obsidian_vault}",
+            file=sys.stderr,
+        )
+        return 2
+
     uploader = OSSUploader(config)
     processor = processor_cls(
         uploader=uploader,
@@ -135,6 +157,8 @@ def main(argv: list[str] | None = None) -> int:
         quality=args.quality,
         process_remote=args.process_remote,
         verbose=not args.quiet,
+        obsidian=not args.no_obsidian,
+        obsidian_vault=args.obsidian_vault,
     )
 
     if not args.quiet:

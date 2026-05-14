@@ -4,9 +4,11 @@ Two processors share the same upload / compress / cache pipeline:
 
 - ``MarkdownProcessor`` handles ``.md`` and ``.mdx``. Recognised image
   references:
-    1. Markdown syntax:  ![alt](url)  or  ![alt](url "title")
-    2. HTML syntax:      <img src="url" ...>   (also covers JSX in MDX)
-    3. Reference style:  [id]: url   (with  ![alt][id]  used elsewhere)
+    1. Markdown syntax:    ![alt](url)  or  ![alt](url "title")
+    2. HTML syntax:        <img src="url" ...>   (also covers JSX in MDX)
+    3. Reference style:    [id]: url   (with  ![alt][id]  used elsewhere)
+    4. Obsidian wikilink:  ![[image.png]] / ![[image.png|alt|400x200]]
+       (only when ``obsidian=True``; skipped for non-image extensions)
   Fenced code blocks (``` and ~~~) and inline `code` are left untouched.
 
 - ``HtmlProcessor`` handles ``.html`` / ``.htm``. Only ``<img src="...">``
@@ -16,12 +18,14 @@ Two processors share the same upload / compress / cache pipeline:
 
 from __future__ import annotations
 
+import html
+import os
 import re
 import sys
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from typing import Tuple
+from typing import Optional, Tuple
 
 from .compressor import compress_image
 from .uploader import OSSUploader
@@ -63,6 +67,22 @@ _REF_DEF_RE = re.compile(
     re.VERBOSE,
 )
 
+# Obsidian wikilink image embed:
+#   ![[image.png]]
+#   ![[image.png|alt]]            (or  ![[image.png|400]] / 400x200)
+#   ![[image.png|alt|400x200]]    (pipe segments in either order)
+_OBSIDIAN_IMAGE_RE = re.compile(r"!\[\[(?P<target>[^\]|]+?)(?:\|(?P<params>[^\]]*))?\]\]")
+
+# Size token inside an Obsidian wikilink pipe segment: "400" or "400x200".
+_OBSIDIAN_SIZE_RE = re.compile(r"^\d+(?:x\d+)?$")
+
+# Extensions we treat as images. Non-image wikilinks (e.g. ![[some-note]])
+# are left untouched so note-transclusions don't get uploaded by accident.
+_IMAGE_EXTS = frozenset({
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg",
+    ".avif", ".bmp", ".tif", ".tiff", ".ico",
+})
+
 # Fenced code blocks and inline code in Markdown.
 _MD_CODE_RE = re.compile(
     r"```.*?```|~~~.*?~~~|`[^`\n]+`",
@@ -92,14 +112,25 @@ class _BaseProcessor:
         quality: int = 85,
         process_remote: bool = False,
         verbose: bool = True,
+        obsidian: bool = True,
+        obsidian_vault: Optional[Path] = None,
     ):
         self.uploader = uploader
         self.compress = compress
         self.quality = quality
         self.process_remote = process_remote
         self.verbose = verbose
+        self.obsidian = obsidian
         self._cache: dict[str, str] = {}
         self.stats = {"found": 0, "uploaded": 0, "skipped": 0, "failed": 0}
+
+        # Obsidian vault resolution state (lazy).
+        # If the user gave us a path explicitly, use it and skip auto-detection.
+        self._obsidian_vault_root: Optional[Path] = (
+            obsidian_vault.resolve() if obsidian_vault else None
+        )
+        self._obsidian_vault_searched: bool = obsidian_vault is not None
+        self._obsidian_index: Optional[dict[str, list[Path]]] = None
 
     # ------------------------------------------------------------------ public
 
@@ -138,6 +169,121 @@ class _BaseProcessor:
 
         new_attrs = _HTML_SRC_RE.sub(src_sub, attrs)
         return f"<img{new_attrs}>"
+
+    # ----------------------------------------------------------- Obsidian wikilinks
+
+    def _obsidian_replace(self, match: re.Match, base_dir: Path) -> str:
+        original = match.group(0)
+        target = (match.group("target") or "").strip()
+        if not target:
+            return original
+
+        # Only treat known image extensions as images; ![[some-note]] etc. are left alone.
+        if Path(target).suffix.lower() not in _IMAGE_EXTS:
+            return original
+
+        # Split pipe params into size + alt. Size = a segment matching \d+(x\d+)?.
+        # The last such segment wins (handles both "alt|400" and "400|alt").
+        alt_parts: list[str] = []
+        size: Optional[str] = None
+        params = match.group("params")
+        if params is not None:
+            for segment in params.split("|"):
+                seg = segment.strip()
+                if seg and _OBSIDIAN_SIZE_RE.match(seg):
+                    size = seg
+                elif seg:
+                    alt_parts.append(seg)
+        alt = " ".join(alt_parts)
+
+        resolved = self._resolve_obsidian_target(target, base_dir)
+        if resolved is None:
+            self._log(f"  ⚠  obsidian wikilink not found: {original}")
+            self.stats["failed"] += 1
+            return original
+
+        new_url = self._maybe_upload(str(resolved), base_dir)
+        # If upload itself failed, _maybe_upload returns the input path. Don't
+        # write an ugly absolute local path into the document — keep the original
+        # wikilink so the user can re-run.
+        if new_url == str(resolved):
+            return original
+
+        if size:
+            if "x" in size:
+                w, h = size.split("x", 1)
+                dims = f' width="{w}" height="{h}"'
+            else:
+                dims = f' width="{size}"'
+            return f'<img src="{new_url}" alt="{html.escape(alt, quote=True)}"{dims} />'
+        return f"![{alt}]({new_url})"
+
+    def _resolve_obsidian_target(self, target: str, base_dir: Path) -> Optional[Path]:
+        """Resolve an Obsidian wikilink target to an absolute Path, or None."""
+        decoded = urllib.parse.unquote(target)
+        rel = Path(decoded)
+
+        # Path-like target (contains a slash): try base_dir, then vault root.
+        if rel.parent != Path("."):
+            candidate = (base_dir / rel)
+            if candidate.is_file():
+                return candidate.resolve()
+            vault = self._obsidian_vault(base_dir)
+            if vault is not None:
+                candidate = vault / rel
+                if candidate.is_file():
+                    return candidate.resolve()
+            return None
+
+        # Plain filename: first the common "attachments next to note" case…
+        candidate = base_dir / rel
+        if candidate.is_file():
+            return candidate.resolve()
+
+        # …then a vault-wide filename lookup.
+        index = self._obsidian_lookup(base_dir)
+        matches = index.get(rel.name.lower(), [])
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            joined = ", ".join(str(p) for p in matches)
+            self._log(
+                f"  ⚠  obsidian wikilink '{target}' is ambiguous "
+                f"({len(matches)} matches in vault): {joined}"
+            )
+            return None
+        return None
+
+    def _obsidian_vault(self, base_dir: Path) -> Optional[Path]:
+        """Find the Obsidian vault root (auto-detect on first use)."""
+        if self._obsidian_vault_searched:
+            return self._obsidian_vault_root
+        self._obsidian_vault_searched = True
+        cur = base_dir.resolve()
+        for ancestor in (cur, *cur.parents):
+            if (ancestor / ".obsidian").is_dir():
+                self._obsidian_vault_root = ancestor
+                break
+        return self._obsidian_vault_root
+
+    def _obsidian_lookup(self, base_dir: Path) -> dict[str, list[Path]]:
+        """Lazy filename → [absolute paths] index of the vault's image files."""
+        if self._obsidian_index is not None:
+            return self._obsidian_index
+        index: dict[str, list[Path]] = {}
+        vault = self._obsidian_vault(base_dir)
+        if vault is None:
+            self._obsidian_index = index
+            return index
+        for root, dirs, files in os.walk(vault):
+            # Skip the .obsidian config directory entirely.
+            dirs[:] = [d for d in dirs if d != ".obsidian"]
+            for name in files:
+                suffix = Path(name).suffix.lower()
+                if suffix in _IMAGE_EXTS:
+                    index.setdefault(name.lower(), []).append(Path(root, name).resolve())
+        self._obsidian_index = index
+        return index
 
     def _maybe_upload(self, url: str, base_dir: Path) -> str:
         url = url.strip()
@@ -231,6 +377,11 @@ class MarkdownProcessor(_BaseProcessor):
         text = _MD_IMAGE_RE.sub(lambda m: self._md_replace(m, base_dir), text)
         text = _HTML_IMG_RE.sub(lambda m: self._html_replace(m, base_dir), text)
         text = self._rewrite_references(text, base_dir)
+        # Run Obsidian wikilinks last: their output is standard ![](...) or
+        # <img>, which we don't want re-scanned by the earlier passes (it would
+        # only inflate the "skipped" stat via the is_own_url check).
+        if self.obsidian:
+            text = _OBSIDIAN_IMAGE_RE.sub(lambda m: self._obsidian_replace(m, base_dir), text)
         return text
 
     def _md_replace(self, match: re.Match, base_dir: Path) -> str:

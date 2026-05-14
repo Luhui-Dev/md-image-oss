@@ -41,7 +41,7 @@ $ md-oss posts/2024-trip.md -i --env-file .env
 ## 特性
 
 - **多格式支持**：`.md`、`.mdx`、`.html`、`.htm` 都能直接处理，按后缀自动选择解析模式。
-- **批量替换**：支持 `![](...)`、`<img src="...">`（含 JSX 自闭合）、引用式 `[label]: url` 三种语法。
+- **批量替换**：支持 `![](...)`、`<img src="...">`（含 JSX 自闭合）、引用式 `[label]: url`，以及 Obsidian wikilink `![[image.png]]` 四种语法。
 - **代码块安全**：Markdown 的围栏代码块（` ``` `、`~~~`）和行内代码、HTML 的 `<script>` / `<style>` / `<pre>` / `<code>` / 注释都不会被误改。
 - **高质量压缩**：JPEG progressive + quality 85，PNG 无损优化，WebP method=6；GIF / SVG 等不动。
 - **去重上传**：用内容哈希作为文件名，重复内容不会重复上传。
@@ -116,6 +116,12 @@ md-oss article.md --dry-run > preview.md
 # 静默模式：
 md-oss article.md -i --quiet
 
+# Obsidian：默认识别 ![[image.png]]，附件不与笔记同目录时可显式指定 vault 根：
+md-oss note.md --obsidian-vault ~/Obsidian/MyVault
+
+# 关掉 wikilink 解析（非 Obsidian 用户、或文档里恰好有同形语法）：
+md-oss article.md --no-obsidian
+
 # MDX / HTML 同样工作，输出后缀跟随输入：
 md-oss post.mdx              # → post.oss.mdx
 md-oss page.html -i          # 直接覆盖
@@ -132,6 +138,7 @@ md-oss page.html -i          # 直接覆盖
 - `![alt](url "title")` — 带 title
 - `<img src="img.png" />` — HTML 标签
 - `[ref]: ./img.png` — 引用式定义
+- `![[image.png]]` / `![[image.png|alt|400x200]]` — Obsidian wikilink（默认启用，可用 `--no-obsidian` 关闭；有尺寸时输出 `<img>` 标签）
 - 远程图片（仅当显式开启 `--process-remote`）
 
 不替换：
