@@ -8,6 +8,15 @@
 
 把 Markdown / MDX / HTML 文档里的所有图片上传到阿里云 OSS，并自动重写文档里的图片链接。上传前先做一次高质量的本地压缩，配置全部从环境变量读取。
 
+## 两种使用方式
+
+| 形态 | 适合场景 | 入口 |
+|---|---|---|
+| **CLI**（本仓库根目录） | 批量处理、CI / 服务器、与构建脚本组合 | `md-oss` 命令，见下方「快速上手」 |
+| **Obsidian 插件**（[`obsidian-plugin/`](obsidian-plugin/)） | 在 Obsidian 笔记里一键上传 + 多选图片管理 Modal | 见 [obsidian-plugin/README.md](obsidian-plugin/README.md) |
+
+两端命名约定一致（`<prefix>/<sha256[:24]>.<ext>`），CLI 上传过的图在插件里识别为「已在自家 OSS」自动跳过，反之亦然。
+
 ## 快速上手
 
 ```bash

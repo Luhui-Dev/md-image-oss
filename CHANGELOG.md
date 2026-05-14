@@ -3,7 +3,23 @@
 本项目版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 变更记录格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
-版本号的唯一来源是 [`md_image_oss/__init__.py`](md_image_oss/__init__.py) 里的 `__version__`，
+CLI 版本号在 [`md_image_oss/__init__.py`](md_image_oss/__init__.py) 的 `__version__`；
+插件版本号在 [`obsidian-plugin/manifest.json`](obsidian-plugin/manifest.json) 的 `version`。
+
+## Plugin 1.0.0 - 2026-05-14
+
+首个正式发布版本。
+
+### Added
+
+- 新增 Obsidian 插件形态（[`obsidian-plugin/`](obsidian-plugin/)）—— 在编辑器内一键把当前笔记的图片上传到 OSS 并就地重写链接，不需要切到终端。
+- 命令：`上传当前笔记中的所有图片到 OSS（覆盖式）` 与 `打开当前笔记的图片管理面板`。
+- 图片管理 Modal：缩略图 + 体积 + 状态徽章（本地 / 已在 OSS / 外链 / 缺失）+ 多选 + 全部/仅本地/尚未上传/缺失过滤。
+- Settings 面板：OSS 凭据六字段、压缩开关 + 质量滑块、远程图开关、并发数、连接测试探针；必填项以红色 `*` 标注。
+- 国际化：界面根据 Obsidian 的 `localStorage.language` 在中文 / 英文之间自动切换。
+- 命名约定与 CLI 完全对齐（`<prefix>/<sha256[:24]>.<ext>`），CLI 上传过的图在插件里自动 `headObject` 短路，反之亦然。
+- 并发编辑保护：上传期间笔记被修改，受影响的引用跳过并以 `偏移=N` 报告。
+- 仅桌面端（`isDesktopOnly=true`），移动端留待后续里程碑。
 
 ## [0.2.0] - 2026-05-06
 

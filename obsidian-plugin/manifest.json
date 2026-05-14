@@ -1,0 +1,10 @@
+{
+  "id": "md-image-oss",
+  "name": "md-image-oss",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "Upload images referenced in the current note to Aliyun OSS, compress them first, and rewrite the links in place.",
+  "author": "Luhui Dev",
+  "authorUrl": "https://github.com/Luhui-Dev/md-image-oss",
+  "isDesktopOnly": true
+}
