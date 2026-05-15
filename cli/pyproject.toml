@@ -24,10 +24,13 @@ dependencies = [
 ]
 
 [project.scripts]
-md-oss = "md_image_oss.cli:main"
+md-oss = "cli.cli:main"
 
 [tool.setuptools.dynamic]
-version = { attr = "md_image_oss.__version__" }
+version = { attr = "cli.__version__" }
 
-[tool.setuptools.packages.find]
-include = ["md_image_oss*"]
+[tool.setuptools]
+packages = ["cli"]
+
+[tool.setuptools.package-dir]
+"cli" = "."
