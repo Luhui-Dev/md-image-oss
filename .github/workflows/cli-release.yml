@@ -1,0 +1,58 @@
+name: CLI release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install build tooling
+        run: pip install build
+
+      - name: Resolve version + verify __version__ matches tag
+        id: ver
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          PKG=$(python -c "import md_image_oss; print(md_image_oss.__version__)")
+          if [ "$VERSION" != "$PKG" ]; then
+            echo "Tag version '$VERSION' does not match md_image_oss.__version__ '$PKG'"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build sdist + wheel
+        run: python -m build
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: md-image-oss CLI v${{ steps.ver.outputs.version }}
+          generate_release_notes: true
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+          body: |
+            ## 安装
+
+            ```bash
+            pip install md-image-oss==${{ steps.ver.outputs.version }}
+            ```
+
+            或直接下载下方的 wheel / sdist 后用 `pip install <文件>` 本地安装。
+
+            ---
+            详细使用说明见 [README.md](https://github.com/Luhui-Dev/md-image-oss/blob/main/README.md)。
