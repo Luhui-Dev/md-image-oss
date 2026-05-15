@@ -22,10 +22,10 @@
 
 ```bash
 # 1. 安装
-pip install -e .
+pip install -e cli/
 
 # 2. 配置（填入阿里云 OSS 凭据）
-cp .env.example .env && $EDITOR .env
+cp cli/.env.example .env && $EDITOR .env
 
 # 3. 处理一篇文章（默认输出到 article.oss.md）
 md-oss article.md --env-file .env
@@ -63,14 +63,14 @@ $ md-oss posts/2024-trip.md -i --env-file .env
 ```bash
 git clone <this-repo> md-image-oss
 cd md-image-oss
-pip install -e .
+pip install -e cli/
 ```
 
 或者直接装依赖在仓库目录里跑：
 
 ```bash
-pip install -r requirements.txt
-python -m md_image_oss <article.md>
+pip install -r cli/requirements.txt
+python -m cli <article.md>
 ```
 
 需要 Python 3.9+。
@@ -80,7 +80,7 @@ python -m md_image_oss <article.md>
 把 `.env.example` 复制成 `.env` 并填上你自己的密钥：
 
 ```bash
-cp .env.example .env
+cp cli/.env.example .env
 # 编辑 .env
 ```
 
@@ -162,17 +162,19 @@ md-oss page.html -i          # 直接覆盖
 
 ```
 md-image-oss/
-├── md_image_oss/
+├── cli/                  # Python CLI 子项目（项目根 + 包源码）
+│   ├── pyproject.toml
+│   ├── requirements.txt
+│   ├── .env.example
 │   ├── __init__.py
-│   ├── __main__.py      # python -m md_image_oss
-│   ├── cli.py           # 命令行入口与参数解析
-│   ├── config.py        # 从环境变量加载配置
-│   ├── compressor.py    # 基于 Pillow 的图像压缩
-│   ├── uploader.py      # OSS 上传（哈希去重）
-│   └── processor.py     # Markdown 解析 / 重写
-├── pyproject.toml
-├── requirements.txt
-├── .env.example
+│   ├── __main__.py       # python -m cli
+│   ├── cli.py            # 命令行入口与参数解析
+│   ├── config.py         # 从环境变量加载配置
+│   ├── compressor.py     # 基于 Pillow 的图像压缩
+│   ├── uploader.py       # OSS 上传（哈希去重）
+│   └── processor.py      # Markdown 解析 / 重写
+├── obsidian-plugin/      # Obsidian 插件子项目
+├── docs/                 # 官网静态站点
 ├── .gitignore
 └── README.md
 ```

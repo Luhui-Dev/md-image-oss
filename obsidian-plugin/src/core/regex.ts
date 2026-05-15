@@ -1,4 +1,4 @@
-// 1:1 port of the regex constants in md_image_oss/processor.py.
+// 1:1 port of the regex constants in cli/processor.py.
 // Keep these as named exports so tests can pin behaviour against the Python fixtures.
 
 // ![alt](url)  or  ![alt](url "title")  or  ![alt](<url with spaces>)

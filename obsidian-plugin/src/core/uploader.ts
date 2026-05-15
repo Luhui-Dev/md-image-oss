@@ -1,4 +1,4 @@
-// Aliyun OSS uploader. Mirrors md_image_oss/uploader.py:
+// Aliyun OSS uploader. Mirrors cli/uploader.py:
 //   key = `${prefix}/${sha256(data)[:24]}${ext}`  (prefix is optional)
 //   short-circuit via headObject(key)
 //   isOwnUrl tests custom_domain OR `${bucket}.${endpoint}`
