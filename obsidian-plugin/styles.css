@@ -175,3 +175,126 @@
   margin-left: 0;
   margin-right: 2px;
 }
+
+/* --- Side panel (ImagePanelView) ------------------------------------ */
+
+.mdoss-panel {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+  overflow: hidden;
+}
+
+.mdoss-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mdoss-panel-title {
+  font-weight: 600;
+  font-size: var(--font-ui-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.mdoss-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.mdoss-panel-icon-btn {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.mdoss-panel-icon-btn:hover:not(:disabled) {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+.mdoss-panel-icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Override the modal-tuned list inside the panel: take all remaining height
+ * instead of a viewport-percentage cap. */
+.mdoss-panel-list {
+  max-height: none;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Narrow-panel grid: drop the modal's extra trailing column. */
+.mdoss-panel-row {
+  grid-template-columns: auto 40px 1fr auto auto;
+  gap: 0.5rem;
+  padding: 0.4rem;
+}
+
+.mdoss-panel-thumb {
+  width: 40px;
+  height: 40px;
+}
+
+.mdoss-panel-domain {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* In the narrow panel, the modal-era badge styling collapses to an unreadable
+ * solid block because --background-modifier-success and --text-success are
+ * too close in many themes. Override with low-opacity tints + Obsidian's
+ * named accent colors so the text is always legible. */
+.mdoss-panel .mdoss-badge {
+  font-weight: 500;
+}
+.mdoss-panel .mdoss-badge.is-local {
+  background: rgba(var(--color-green-rgb), 0.18);
+  color: var(--color-green);
+}
+.mdoss-panel .mdoss-badge.is-remote {
+  background: var(--background-modifier-border);
+  color: var(--text-muted);
+}
+.mdoss-panel .mdoss-badge.is-oss {
+  background: rgba(var(--color-purple-rgb), 0.18);
+  color: var(--color-purple);
+}
+.mdoss-panel .mdoss-badge.is-missing {
+  background: rgba(var(--color-red-rgb), 0.18);
+  color: var(--color-red);
+}
+
+.mdoss-panel-row-action {
+  display: flex;
+  align-items: center;
+}
+
+.mdoss-panel-empty,
+.mdoss-panel-no-match {
+  padding: 1.5rem 1rem;
+  color: var(--text-muted);
+  text-align: center;
+  font-size: var(--font-ui-small);
+}
+
+.mdoss-panel-footer {
+  margin-top: auto;
+}
+
+.mdoss-panel-counter {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  margin-right: auto;
+}

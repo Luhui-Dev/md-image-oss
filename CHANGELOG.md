@@ -6,6 +6,40 @@
 CLI 版本号在 [`md_image_oss/__init__.py`](md_image_oss/__init__.py) 的 `__version__`；
 插件版本号在 [`obsidian-plugin/manifest.json`](obsidian-plugin/manifest.json) 的 `version`。
 
+## Plugin 1.1.0 - 2026-05-15
+
+围绕「降低使用门槛」做的一次 UI 重构：把图片管理器从命令面板深处的弹窗拉到工作区常驻面板，并随笔记内容实时刷新。
+
+### Added
+
+- 左侧 Ribbon 新增 `image-up` 图标，一键打开图片管理面板。
+- 右侧持久化面板视图（`ItemView`），跟随活动笔记自动切换，不再依赖 Modal。
+- 面板每行新增 **Domain** 列：本地图显示 `本地 · 仓库 → <目标域>`（推算自 `customDomain` 或 `bucket.endpoint`，与 `Uploader.buildUrl` 严格一致），远程图显示 host。
+- 状态徽标重整为四态：**本地**（绿）/ **云端**（灰）/ **OSS**（紫）/ **缺失**（红）；新配色用低透明度色块 + Obsidian 命名色变量，跨主题保持对比度可读。
+- 每行新增「上传」图标按钮，可对单张图直接发起上传，无需先勾选再走底部 CTA。
+- 实时刷新：订阅 `metadataCache.changed`，写文档时面板自动同步图片增删，无需手动刷新。
+  - 选中状态与上传中 spinner 使用稳定字符串键 `(kind, rawUrl, 出现序号)`，跨刷新保留用户操作。
+  - 扫描结果签名短路：在非图片区域打字时跳过 DOM 重建，避免闪烁。
+
+### Changed
+
+- 「打开图片管理面板」命令、编辑器右键菜单的同名条目现在都打开面板而非弹窗。
+- 「切换可见项」按钮改名为「全选」，行为不变（全选/全不选当前可见可勾选项）。
+- 文件菜单（笔记 tab `⋯` 更多）下的「上传全部图片」与「打开图片管理面板」两项被移除 —— 已被 Ribbon、命令面板、编辑器右键菜单完全覆盖。
+- 插件类内部把 `runPipeline` + `runPipelineForFile` 合并为统一的 `runUpload(file, items)` —— 自动判断目标文件是否有打开的编辑器，分别走 `editor.transaction`（保留 undo）或 `vault.process`。
+
+### Removed
+
+- 删除 `ImageListModal`（已由 `ImagePanelView` 取代）。
+- 删除现已无人调用的 `runImageManager*` / `runUploadAllForFile` / `openPanelForFile` 方法。
+- i18n 中 `modal.*` 命名空间整体迁移为 `panel.*`。
+
+### Notes
+
+- 选中状态键基于 `(kind, rawUrl, 同 rawUrl 的出现序号)`：在图片上方插入/删除文字时该键不变，所以用户手动取消的勾选不会被后续刷新重新勾上；上传中的 spinner 也不会跳变。
+- 「云端」（cloud / `is-remote`）特指非自家 OSS 的远程图；自家 OSS 的资源单独走「OSS」状态。
+- 已知小问题：`describeDomain` 返回值仍带 `isOss` 字段、i18n 仍保留 `ossBadge` 字符串，皆为现已无消费者的死代码，下次清理迭代再处理。
+
 ## Plugin 1.0.0 - 2026-05-14
 
 首个正式发布版本。
