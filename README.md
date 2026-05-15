@@ -4,7 +4,8 @@
 
 [![License](https://img.shields.io/github/license/Luhui-Dev/md-image-oss)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
-[![Release](https://img.shields.io/github/v/release/Luhui-Dev/md-image-oss)](https://github.com/Luhui-Dev/md-image-oss/releases)
+[![CLI Release](https://img.shields.io/github/v/release/Luhui-Dev/md-image-oss?filter=v*&label=cli)](https://github.com/Luhui-Dev/md-image-oss/releases?q=tag%3Av&expanded=true)
+[![Plugin Release](https://img.shields.io/github/v/release/Luhui-Dev/md-image-oss?filter=plugin-v*&label=plugin)](https://github.com/Luhui-Dev/md-image-oss/releases?q=tag%3Aplugin-v&expanded=true)
 
 把 Markdown / MDX / HTML 文档里的所有图片上传到阿里云 OSS，并自动重写文档里的图片链接。上传前先做一次高质量的本地压缩，配置全部从环境变量读取。
 
