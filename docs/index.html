@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>md-image-oss · Markdown 图片自动上阿里云 OSS</title>
+  <meta name="description"
+    content="md-image-oss 把 Markdown / MDX / HTML 里的本地图片自动上传到阿里云 OSS，压缩、去重、原地改链接。提供命令行工具和 Obsidian 插件两种形态。">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- ============ Top status bar ============ -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#top" aria-label="Luhui-Dev/md-image-oss">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <circle cx="9" cy="12" r="6" />
+            <circle cx="19" cy="7" r="2" />
+          </svg>
+        </span>
+        <span class="brand-path">
+          <span class="brand-org">Luhui-Dev</span><span class="brand-slash">/</span><span
+            class="brand-name">md-image-oss</span>
+        </span>
+      </a>
+      <nav class="topbar-meta" aria-label="项目元数据">
+        <span>v0.2.0</span>
+        <span class="sep">/</span>
+        <span>MIT</span>
+        <span class="sep">/</span>
+        <span class="hide-sm">Aliyun OSS</span>
+        <span class="sep hide-sm">/</span>
+        <a href="https://github.com/Luhui-Dev/md-image-oss" target="_blank" rel="noopener">GitHub ↗</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- ============ Hero ============ -->
+    <section class="hero" aria-label="md-image-oss">
+      <svg class="hero-canvas" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <!-- L1: 对角辅助线（最深层） -->
+        <g class="guides" aria-hidden="true">
+          <line x1="0" y1="0" x2="1200" y2="600" />
+          <line x1="1200" y1="0" x2="0" y2="600" />
+          <line x1="600" y1="-40" x2="600" y2="640" />
+          <line x1="-40" y1="300" x2="1240" y2="300" />
+        </g>
+
+        <!-- L2: 静态星点（背景纹理） -->
+        <g class="starfield" aria-hidden="true">
+          <circle cx="62" cy="92" r="1.4" />
+          <circle cx="158" cy="48" r="1" />
+          <circle cx="244" cy="120" r="1.6" />
+          <circle cx="86" cy="220" r="1" />
+          <circle cx="190" cy="380" r="1.4" />
+          <circle cx="44" cy="460" r="1" />
+          <circle cx="140" cy="544" r="1.6" />
+          <circle cx="262" cy="486" r="1" />
+          <circle cx="340" cy="60" r="1" />
+          <circle cx="420" cy="138" r="1.4" />
+          <circle cx="486" cy="46" r="1" />
+          <circle cx="528" cy="540" r="1.4" />
+          <circle cx="440" cy="488" r="1" />
+          <circle cx="690" cy="98" r="1" />
+          <circle cx="780" cy="44" r="1.6" />
+          <circle cx="862" cy="124" r="1" />
+          <circle cx="916" cy="60" r="1.4" />
+          <circle cx="744" cy="540" r="1" />
+          <circle cx="836" cy="492" r="1.4" />
+          <circle cx="920" cy="554" r="1" />
+          <circle cx="996" cy="80" r="1.4" />
+          <circle cx="1078" cy="50" r="1" />
+          <circle cx="1146" cy="120" r="1.6" />
+          <circle cx="1020" cy="220" r="1" />
+          <circle cx="1132" cy="320" r="1" />
+          <circle cx="1068" cy="410" r="1.4" />
+          <circle cx="1156" cy="500" r="1" />
+          <circle cx="980" cy="538" r="1.4" />
+          <circle cx="380" cy="300" r="1" />
+          <circle cx="820" cy="300" r="1" />
+        </g>
+
+        <!-- L3: 同心轨道（4 层） -->
+        <circle cx="600" cy="300" r="440" class="ring ring-outer" />
+        <circle cx="600" cy="300" r="380" class="ring ring-faint" />
+        <circle cx="600" cy="300" r="280" class="ring ring-main" />
+        <circle cx="600" cy="300" r="180" class="ring ring-dash" />
+        <circle cx="600" cy="300" r="96" class="ring ring-inner" />
+
+        <!-- L4: 罗盘刻度（外圈每 30°） -->
+        <g class="compass" aria-hidden="true">
+          <line x1="600" y1="-150" x2="600" y2="-130" transform="rotate(0   600 300)" />
+          <line x1="600" y1="-150" x2="600" y2="-138" transform="rotate(30  600 300)" />
+          <line x1="600" y1="-150" x2="600" y2="-138" transform="rotate(60  600 300)" />
+          <line x1="600" y1="-150" x2="600" y2="-130" transform="rotate(90  600 300)" />
+          <line x1="600" y1="-150" x2="600" y2="-138" transform="rotate(120 600 300)" />
+          <line x1="600" y1="-150" x2="600" y2="-138" transform="rotate(150 600 300)" />
+          <line x1="600" y1="-150" x2="600" y2="-130" transform="rotate(180 600 300)" />
+          <line x1="600" y1="-150" x2="600" y2="-138" transform="rotate(210 600 300)" />
+          <line x1="600" y1="-150" x2="600" y2="-138" transform="rotate(240 600 300)" />
+          <line x1="600" y1="-150" x2="600" y2="-130" transform="rotate(270 600 300)" />
+          <line x1="600" y1="-150" x2="600" y2="-138" transform="rotate(300 600 300)" />
+          <line x1="600" y1="-150" x2="600" y2="-138" transform="rotate(330 600 300)" />
+        </g>
+
+        <!-- L5: 中心十字准星 -->
+        <g class="crosshair" aria-hidden="true">
+          <line x1="588" y1="300" x2="594" y2="300" />
+          <line x1="606" y1="300" x2="612" y2="300" />
+          <line x1="600" y1="288" x2="600" y2="294" />
+          <line x1="600" y1="306" x2="600" y2="312" />
+          <circle cx="600" cy="300" r="2" class="dot-body crosshair-dot" />
+        </g>
+
+        <!-- L6: 卫星（8 颗，不同半径/速度） -->
+        <g class="sat sat-1">
+          <circle cx="880" cy="300" r="14" class="dot-body" />
+        </g>
+        <g class="sat sat-2">
+          <circle cx="600" cy="20" r="6" class="dot-body" />
+        </g>
+        <g class="sat sat-3">
+          <circle cx="220" cy="300" r="20" class="dot-body" />
+        </g>
+        <g class="sat sat-4">
+          <circle cx="780" cy="300" r="4" class="dot-body" />
+        </g>
+        <g class="sat sat-5">
+          <circle cx="600" cy="480" r="9" class="dot-body" />
+        </g>
+        <g class="sat sat-6">
+          <circle cx="160" cy="300" r="3" class="dot-body" />
+        </g>
+        <g class="sat sat-7">
+          <circle cx="600" cy="156" r="5" class="dot-body" />
+        </g>
+        <g class="sat sat-8">
+          <circle cx="496" cy="300" r="2.5" class="dot-body" />
+        </g>
+
+        <!-- L7: 角落微粒（呼吸） -->
+        <circle cx="80" cy="80" r="2" class="dot-body pulse pulse-a" />
+        <circle cx="1120" cy="100" r="3" class="dot-body pulse pulse-b" />
+        <circle cx="120" cy="520" r="2" class="dot-body pulse pulse-c" />
+        <circle cx="1080" cy="500" r="3" class="dot-body pulse pulse-d" />
+      </svg>
+
+      <div class="hero-grid" aria-hidden="true"></div>
+
+      <div class="hero-lockup">
+        <p class="hero-eyebrow">
+          <span class="eyebrow-dot" aria-hidden="true"></span>
+          EST. 2026 · A CLI &amp; OBSIDIAN PLUGIN
+        </p>
+        <h1 class="tagline">
+          <span class="visually-hidden">md-image-oss · </span>
+          <span class="tag-bracket" aria-hidden="true">[</span>
+          Markdown 图片自动上阿里云 OSS
+          <span class="tag-bracket" aria-hidden="true">]</span>
+        </h1>
+        <ul class="benefits" aria-label="核心能力">
+          <li><span class="benefit-num">01</span>压缩</li>
+          <li><span class="benefit-num">02</span>去重</li>
+          <li><span class="benefit-num">03</span>原地改链接</li>
+        </ul>
+        <div class="fact-track" aria-live="polite">
+          <span class="fact-label">FACT</span>
+          <p class="fact"></p>
+        </div>
+      </div>
+
+      <a class="scroll-cue" href="#paths" aria-label="向下滚动">
+        <span>SCROLL</span>
+        <svg viewBox="0 0 12 24" aria-hidden="true">
+          <line x1="6" y1="0" x2="6" y2="20" />
+          <polyline points="1,15 6,20 11,15" />
+        </svg>
+      </a>
+    </section>
+
+    <!-- ============ Paths (CLI / Obsidian) ============ -->
+    <section class="paths section" id="paths" aria-label="选择你的使用方式">
+      <header class="section-head">
+        <span class="section-no">01 / 04</span>
+        <h2 class="section-title">两种使用方式</h2>
+        <p class="section-deck">同一套图片命名规则。终端里跑批，编辑器里随手。</p>
+      </header>
+
+      <div class="paths-grid">
+
+        <article class="path-card">
+          <div class="path-head">
+            <span class="path-num">01</span>
+            <span class="path-for">FOR&nbsp;&nbsp;THE&nbsp;&nbsp;TERMINAL</span>
+          </div>
+          <svg class="path-motif" viewBox="0 0 120 120" aria-hidden="true">
+            <circle cx="60" cy="60" r="44" class="motif-fill" />
+          </svg>
+          <h3 class="path-title">命令行工具</h3>
+          <p class="path-desc">在终端处理 <code>.md</code> / <code>.mdx</code> / <code>.html</code>，适合批量、CI、博客发布流程。</p>
+          <pre class="path-sample" aria-label="示例命令"><span class="prompt">$</span> pip install md-image-oss
+<span class="prompt">$</span> md-oss article.md -i</pre>
+          <a class="btn btn-primary" href="https://github.com/Luhui-Dev/md-image-oss" target="_blank" rel="noopener">
+            <span>前往 GitHub 仓库</span>
+            <span class="btn-arrow" aria-hidden="true">→</span>
+          </a>
+        </article>
+
+        <article class="path-card">
+          <div class="path-head">
+            <span class="path-num">02</span>
+            <span class="path-for">FOR&nbsp;&nbsp;THE&nbsp;&nbsp;EDITOR</span>
+          </div>
+          <svg class="path-motif" viewBox="0 0 120 120" aria-hidden="true">
+            <circle cx="60" cy="60" r="30" class="motif-fill" />
+            <circle cx="60" cy="60" r="52" class="motif-orbit" />
+            <g class="motif-satellite-group">
+              <circle cx="112" cy="60" r="6" class="motif-fill" />
+            </g>
+          </svg>
+          <h3 class="path-title">Obsidian 插件</h3>
+          <p class="path-desc">在 Obsidian 里一键 / 多选上传当前笔记的所有图片，与 CLI 共享命名规则。</p>
+          <pre class="path-sample" aria-label="示意">同一张图，
+CLI 和插件传出的链接 <em>完全一致</em>。</pre>
+          <button class="btn btn-ghost" type="button" aria-disabled="true"
+            data-tooltip="正在等待 Obsidian Community Plugins 审核">
+            <span>即将上架官方插件库</span>
+            <span class="btn-arrow" aria-hidden="true">→</span>
+          </button>
+          <a class="link-secondary" href="https://github.com/Luhui-Dev/md-image-oss/tree/main/obsidian-plugin"
+            target="_blank" rel="noopener">
+            先去看插件 README →
+          </a>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ============ Promo video slot ============ -->
+    <section class="video section" aria-label="宣传片">
+      <header class="section-head">
+        <span class="section-no">02 / 04</span>
+        <h2 class="section-title">宣传片</h2>
+        <p class="section-deck">两分钟看完。制作中。</p>
+      </header>
+
+      <div class="video-slot" id="video-slot">
+        <span class="video-rec" aria-hidden="true">
+          <span class="rec-dot"></span> REC
+        </span>
+        <button class="play-fake" type="button" id="play-fake" aria-label="宣传片制作中">
+          <svg viewBox="0 0 80 80" aria-hidden="true">
+            <circle cx="40" cy="40" r="38" class="play-ring play-ring-outer" />
+            <circle cx="40" cy="40" r="30" class="play-ring play-ring-inner" />
+            <polygon points="33,26 33,54 56,40" class="play-tri" />
+          </svg>
+        </button>
+        <p class="video-caption">宣传片 · 制作中</p>
+        <span class="video-timer" id="video-timer" aria-hidden="true">00:00 / -- : --</span>
+        <span class="video-tooltip" id="video-tooltip" role="status" aria-hidden="true">宣传片制作中，敬请期待</span>
+      </div>
+    </section>
+
+    <!-- ============ Features ============ -->
+    <section class="features section" aria-label="特性">
+      <header class="section-head">
+        <span class="section-no">03 / 04</span>
+        <h2 class="section-title">为什么是 md-image-oss</h2>
+        <p class="section-deck">五条克制的、彼此独立的设计选择。</p>
+      </header>
+
+      <ul class="features-grid">
+        <li class="feature">
+          <span class="feature-code">F.01</span>
+          <svg class="feature-motif" viewBox="0 0 60 60" aria-hidden="true">
+            <circle cx="30" cy="30" r="14" />
+          </svg>
+          <h3>多格式支持</h3>
+          <p><code>.md</code> · <code>.mdx</code> · <code>.html</code>，一套工具搞定。</p>
+        </li>
+        <li class="feature">
+          <span class="feature-code">F.02</span>
+          <svg class="feature-motif" viewBox="0 0 60 60" aria-hidden="true">
+            <circle cx="30" cy="30" r="20" fill="none" stroke="currentColor" stroke-width="1.2" />
+            <circle cx="30" cy="30" r="6" />
+          </svg>
+          <h3>安全解析</h3>
+          <p>跳过代码块、<code>&lt;script&gt;</code>、<code>&lt;style&gt;</code>、HTML 注释 —— 不动文字。</p>
+        </li>
+        <li class="feature">
+          <span class="feature-code">F.03</span>
+          <svg class="feature-motif" viewBox="0 0 60 60" aria-hidden="true">
+            <circle cx="14" cy="30" r="6" />
+            <circle cx="30" cy="30" r="6" />
+            <circle cx="46" cy="30" r="6" />
+            <circle cx="38" cy="14" r="3" />
+          </svg>
+          <h3>四种图片语法</h3>
+          <p>Markdown、HTML <code>&lt;img&gt;</code>、引用式、Obsidian wikilink，任意混用。</p>
+        </li>
+        <li class="feature">
+          <span class="feature-code">F.04</span>
+          <svg class="feature-motif" viewBox="0 0 60 60" aria-hidden="true">
+            <circle cx="30" cy="30" r="22" fill="none" stroke="currentColor" stroke-width="1" />
+            <circle cx="30" cy="30" r="10" />
+          </svg>
+          <h3>高质量压缩</h3>
+          <p>JPEG 渐进 q85、PNG 无损、WebP method=6；GIF / SVG 原样保留。</p>
+        </li>
+        <li class="feature">
+          <span class="feature-code">F.05</span>
+          <svg class="feature-motif" viewBox="0 0 60 60" aria-hidden="true">
+            <circle cx="22" cy="30" r="10" />
+            <circle cx="38" cy="30" r="10" fill="none" stroke="currentColor" stroke-width="1.2" />
+          </svg>
+          <h3>内容哈希去重</h3>
+          <p>SHA-256 命名 —— 同一张图永不重复上传，跨文件共享。</p>
+        </li>
+        <li class="feature feature-empty" aria-hidden="true">
+          <span class="feature-code">F.0X</span>
+          <p class="feature-coming">更多 —— 视用户反馈而定。</p>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ============ Quick start ============ -->
+    <section class="quickstart section" aria-label="快速开始">
+      <header class="section-head">
+        <span class="section-no">04 / 04</span>
+        <h2 class="section-title">快速开始</h2>
+        <p class="section-deck">三行命令，从写完到发布。</p>
+      </header>
+
+      <div class="terminal" role="group" aria-label="终端示例">
+        <div class="term-chrome">
+          <span class="term-dot"></span>
+          <span class="term-dot"></span>
+          <span class="term-dot"></span>
+          <span class="term-name">terminal · ~/blog</span>
+        </div>
+
+        <div class="term-line">
+          <span class="term-comment"># 1. 安装</span>
+        </div>
+        <div class="term-line">
+          <span class="prompt">$</span>
+          <code id="cmd-1">pip install md-image-oss</code>
+          <button class="copy-btn" type="button" data-copy-target="cmd-1" aria-label="复制：安装命令">复制</button>
+        </div>
+
+        <div class="term-line">
+          <span class="term-comment"># 2. 处理文件，输出 article.oss.md</span>
+        </div>
+        <div class="term-line">
+          <span class="prompt">$</span>
+          <code id="cmd-2">md-oss article.md --env-file .env</code>
+          <button class="copy-btn" type="button" data-copy-target="cmd-2" aria-label="复制：处理命令">复制</button>
+        </div>
+
+        <div class="term-line">
+          <span class="term-comment"># 3. 原地覆盖</span>
+        </div>
+        <div class="term-line">
+          <span class="prompt">$</span>
+          <code id="cmd-3">md-oss article.md -i --env-file .env</code>
+          <span class="caret" aria-hidden="true"></span>
+          <button class="copy-btn" type="button" data-copy-target="cmd-3" aria-label="复制：原地覆盖命令">复制</button>
+        </div>
+      </div>
+
+      <p class="quickstart-note">
+        需要先在 <code>.env</code> 里配置阿里云 OSS 凭证 —— 完整说明见
+        <a href="https://github.com/Luhui-Dev/md-image-oss#readme" target="_blank" rel="noopener">仓库 README ↗</a>
+      </p>
+    </section>
+
+  </main>
+
+  <!-- ============ Footer (colophon) ============ -->
+  <footer class="site-foot">
+    <div class="foot-grid">
+      <div class="foot-col">
+        <span class="foot-label">PROJECT</span>
+        <p>md-image-oss</p>
+        <p class="foot-mute">Markdown · MDX · HTML</p>
+      </div>
+      <div class="foot-col">
+        <span class="foot-label">VERSION</span>
+        <p>v0.2.0</p>
+        <p class="foot-mute">MIT License</p>
+      </div>
+      <div class="foot-col">
+        <span class="foot-label">AUTHOR</span>
+        <p>Luhui Dev</p>
+        <p class="foot-mute">2026 — </p>
+      </div>
+      <div class="foot-col">
+        <span class="foot-label">FIND</span>
+        <p><a href="https://github.com/Luhui-Dev/md-image-oss" target="_blank" rel="noopener">GitHub ↗</a></p>
+        <p class="foot-mute"><a href="https://github.com/Luhui-Dev/md-image-oss/issues" target="_blank"
+            rel="noopener">Issues ↗</a></p>
+      </div>
+    </div>
+    <p class="foot-tag">献给所有受够图床失效的写作者。</p>
+    <span class="foot-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <circle cx="9" cy="12" r="6" />
+        <circle cx="19" cy="7" r="2" />
+      </svg>
+    </span>
+  </footer>
+
+  <script src="sprite.js"></script>
+</body>
+
+</html>
