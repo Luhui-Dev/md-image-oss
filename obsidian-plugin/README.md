@@ -1,5 +1,7 @@
 # md-image-oss — Obsidian 插件
 
+**Made by [@LuhuiDev](https://luhuidev.com) · Part of [LuhuiDev Toolkit](https://luhuidev.com)**
+
 把当前笔记里引用的图片一键上传到阿里云 OSS，先压缩、再去重，最后就地重写图片链接 —— 全程不用离开 Obsidian。
 
 本插件是 [md-image-oss CLI](../README.md) 的姊妹形态。两端共用同一套 OSS 命名约定（`<prefix>/<sha256[:24]>.<ext>`），所以 CLI 上传过的图在插件里会被识别为「已在 OSS」直接跳过，反之亦然。
